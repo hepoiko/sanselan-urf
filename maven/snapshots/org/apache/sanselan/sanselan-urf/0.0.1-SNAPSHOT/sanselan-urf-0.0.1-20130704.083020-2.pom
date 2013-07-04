@@ -1,0 +1,72 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>org.apache.sanselan</groupId>
+	<artifactId>sanselan-urf</artifactId>
+	<version>0.0.1-SNAPSHOT</version>
+	<packaging>jar</packaging>
+
+	<name>sanselan-urf</name>
+	<url>http://maven.apache.org</url>
+
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>org.apache.sanselan</groupId>
+			<artifactId>sanselan</artifactId>
+			<version>0.97-incubator</version>
+		</dependency>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>4.10</version>
+			<scope>test</scope>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<plugins>
+			<!-- For Google Code -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<version>2.5</version>
+				<dependencies>
+					<dependency>
+						<groupId>com.google.code.maven-svn-wagon</groupId>
+						<artifactId>maven-svn-wagon</artifactId>
+						<version>1.4</version>
+					</dependency>
+				</dependencies>
+			</plugin>
+
+			<!-- For GitHub -->
+			<!-- <plugin> <groupId>com.github.github</groupId> <artifactId>site-maven-plugin</artifactId> 
+				<version>0.7</version> <configuration> <message>Maven artifacts for ${project.version}</message> 
+				<noJekyll>true</noJekyll> <outputDirectory>${project.build.directory}/mvn-repo</outputDirectory> 
+				<branch>refs/heads/mvn-repo</branch> <includes> <include>**/*</include> </includes> 
+				<repositoryName>sanselan-urf</repositoryName> <repositoryOwner>hepoiko</repositoryOwner> 
+				</configuration> <executions> <execution> <goals> <goal>site</goal> </goals> 
+				<phase>deploy</phase> </execution> </executions> </plugin> -->
+		</plugins>
+	</build>
+
+	<distributionManagement>
+		<!-- GitHub Setting -->
+		<!-- <repository> <id>github</id> <name>GitHub ${project.artifactId} Repository</name> 
+			<url>https://raw.github.com/hepoiko/${project.artifactId}/mvn-repo</url> 
+			</repository> -->
+		<repository>
+			<id>googlecode.release</id>
+			<url>svn:https://sanselan-urf.googlecode.com/svn/maven/releases</url>
+		</repository>
+		<snapshotRepository>
+			<id>googlecode.snapshot</id>
+			<url>svn:https://sanselan-urf.googlecode.com/svn/maven/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
+</project>
