@@ -50,7 +50,8 @@ public class UrfImageParser extends ImageParser {
 		float physicalHeightInch = pageInfo.height / pageInfo.dotPerInch * 1f;
 		int physicalHeightDpi = pageInfo.dotPerInch;
 		float physicalWidthInch = pageInfo.width / pageInfo.dotPerInch * 1f;
-		int physicalWidthDpi = pageInfo.dotPerInch;;
+		int physicalWidthDpi = pageInfo.dotPerInch;
+		;
 		int width = pageInfo.width;
 		boolean isProgressive = false;
 		boolean isTransparent = false;
@@ -69,30 +70,47 @@ public class UrfImageParser extends ImageParser {
 	@Override
 	public BufferedImage getBufferedImage(ByteSource paramByteSource, Map params)
 			throws ImageReadException, IOException {
+		int openPage = 1;
+		if (params != null && params.containsKey(UrfConstants.PAGE)) {
+			openPage = (Integer) params.get(UrfConstants.PAGE);
+		}
+
 		FormatCompliance formatCompliance = FormatCompliance.getDefault();
 		InputStream imageStream = paramByteSource.getInputStream();
 		validateImageHeader(imageStream);
-		getNumberOfPage(imageStream);
-		UrfPageHeaderInfo info = readHeader(imageStream, formatCompliance,
-				false);
-		boolean hasAlpha = false;
-		BufferedImage result = getBufferedImageFactory(params)
-				.getColorBufferedImage(info.width, info.height, hasAlpha);
-		byte[][] data = readImageData(info.width, info.height, info.bpp,
-				imageStream);
-		DataBuffer dataBuffer = result.getRaster().getDataBuffer();
-		int pixelWidth = info.bpp / 8;
-		byte[] pixel = new byte[pixelWidth];
-		for (int y = 0; y < info.height; y++) {
-			byte[] lineContainer = data[y];
-			ByteArrayInputStream xStream = new ByteArrayInputStream(
-					lineContainer);
-			for (int x = 0; x < info.width; x++) {
-				xStream.read(pixel);
-				dataBuffer.setElem(y * info.width + x, pixelToInt(pixel));
-			}
+		int totalPages = getNumberOfPage(imageStream);
+
+		if (openPage > totalPages) {
+			throw new ImageReadException("Image does not contain page "
+					+ openPage);
 		}
-		return result;
+
+		int onPage = 1;
+		while (true) {
+			UrfPageHeaderInfo info = readHeader(imageStream, formatCompliance,
+					false);
+			boolean hasAlpha = false;
+			BufferedImage result = getBufferedImageFactory(params)
+					.getColorBufferedImage(info.width, info.height, hasAlpha);
+			byte[][] data = readImageData(info.width, info.height, info.bpp,
+					imageStream);
+			DataBuffer dataBuffer = result.getRaster().getDataBuffer();
+			int pixelWidth = info.bpp / 8;
+			byte[] pixel = new byte[pixelWidth];
+			for (int y = 0; y < info.height; y++) {
+				byte[] lineContainer = data[y];
+				ByteArrayInputStream xStream = new ByteArrayInputStream(
+						lineContainer);
+				for (int x = 0; x < info.width; x++) {
+					xStream.read(pixel);
+					dataBuffer.setElem(y * info.width + x, pixelToInt(pixel));
+				}
+			}
+			if (onPage == openPage) {
+				return result;
+			}
+			onPage++;
+		}
 	}
 
 	private int pixelToInt(byte[] pixel) {
@@ -128,7 +146,7 @@ public class UrfImageParser extends ImageParser {
 			throws ImageReadException, IOException {
 		return read4Bytes("Number of Pages", imageStream, "Fail");
 	}
-	
+
 	private UrfPageHeaderInfo readHeader(InputStream is,
 			FormatCompliance formatCompliance, boolean verbose)
 			throws IOException, ImageReadException {
@@ -255,7 +273,7 @@ public class UrfImageParser extends ImageParser {
 
 	@Override
 	protected String[] getAcceptedExtensions() {
-		return new String [] { ".urf" };
+		return new String[] { ".urf" };
 	}
 
 	@Override
