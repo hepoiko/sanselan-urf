@@ -51,7 +51,7 @@ public class UrfImageParser extends ImageParser {
 		int physicalHeightDpi = pageInfo.dotPerInch;
 		float physicalWidthInch = pageInfo.width / pageInfo.dotPerInch * 1f;
 		int physicalWidthDpi = pageInfo.dotPerInch;
-		;
+		
 		int width = pageInfo.width;
 		boolean isProgressive = false;
 		boolean isTransparent = false;
@@ -89,25 +89,30 @@ public class UrfImageParser extends ImageParser {
 		while (true) {
 			UrfPageHeaderInfo info = readHeader(imageStream, formatCompliance,
 					false);
-			boolean hasAlpha = false;
-			BufferedImage result = getBufferedImageFactory(params)
-					.getColorBufferedImage(info.width, info.height, hasAlpha);
-			byte[][] data = readImageData(info.width, info.height, info.bpp,
-					imageStream);
-			DataBuffer dataBuffer = result.getRaster().getDataBuffer();
-			int pixelWidth = info.bpp / 8;
-			byte[] pixel = new byte[pixelWidth];
-			for (int y = 0; y < info.height; y++) {
-				byte[] lineContainer = data[y];
-				ByteArrayInputStream xStream = new ByteArrayInputStream(
-						lineContainer);
-				for (int x = 0; x < info.width; x++) {
-					xStream.read(pixel);
-					dataBuffer.setElem(y * info.width + x, pixelToInt(pixel));
+			if (onPage != openPage) {
+				skipImageData(info.width, info.height, info.bpp, imageStream);
+			} else {
+				boolean hasAlpha = false;
+				BufferedImage result = getBufferedImageFactory(params)
+						.getColorBufferedImage(info.width, info.height,
+								hasAlpha);
+				byte[][] data = readImageData(info.width, info.height,
+						info.bpp, imageStream);
+				DataBuffer dataBuffer = result.getRaster().getDataBuffer();
+				int pixelWidth = info.bpp / 8;
+				byte[] pixel = new byte[pixelWidth];
+				for (int y = 0; y < info.height; y++) {
+					byte[] lineContainer = data[y];
+					ByteArrayInputStream xStream = new ByteArrayInputStream(
+							lineContainer);
+					for (int x = 0; x < info.width; x++) {
+						xStream.read(pixel);
+						dataBuffer.setElem(y * info.width + x,
+								pixelToInt(pixel));
+					}
 				}
-			}
-			if (onPage == openPage) {
 				return result;
+
 			}
 			onPage++;
 		}
@@ -165,6 +170,61 @@ public class UrfImageParser extends ImageParser {
 		info.unknownValue3 = read4Bytes("Unknown Value 3", is, "Fail");
 
 		return info;
+	}
+
+	private void skipImageData(int width, int height, int bpp,
+			InputStream imageStream) throws ImageReadException, IOException {
+		int onLine = 0;
+		int pixelSize = bpp / 8;
+		byte[] pixel = new byte[pixelSize];
+
+		while (true) {
+			byte lineRepeatByte = readByte("data", imageStream, "fail");
+			int lineRepeat = (lineRepeatByte & 0xff) + 1;
+			int position = 0;
+
+			// byte[] lineContainer = new byte[pixelSize * width];
+			while (true) {
+				byte code = readByte("packbit", imageStream, "fail");
+
+				if (code == -128) {
+
+					position = width;
+
+				} else if (code >= 0 && code <= 127) {
+					int n = code + 1;
+					pixel = readBytes(imageStream, pixelSize);
+					for (int i = 0; i < n; i++) {
+						position++;
+						if (position >= width) {
+							break;
+						}
+					}
+				} else if (code > -128 && code < 0) {
+					int n = (code * -1) + 1;
+					for (int i = 0; i < n; i++) {
+						pixel = readBytes(imageStream, pixelSize);
+						position++;
+						if (position >= width) {
+							break;
+						}
+					}
+				}
+
+				if (position >= width) {
+					break;
+				}
+			}
+
+			for (int i = 0; i < lineRepeat; i++) {
+				onLine++;
+			}
+
+			if (onLine >= height) {
+				break;
+			}
+		}
+
 	}
 
 	private byte[][] readImageData(int width, int height, int bpp,
